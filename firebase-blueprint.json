@@ -1,0 +1,101 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Gym owner profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "gymId": { "type": "string", "description": "ID of the gym owned by this user" },
+        "role": { "type": "string", "enum": ["owner", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Gym": {
+      "title": "Gym",
+      "description": "Gym details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "ownerUid"]
+    },
+    "Member": {
+      "title": "Member",
+      "description": "Gym member",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "gymId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "planId": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive", "expired"] },
+        "joinedAt": { "type": "string", "format": "date-time" },
+        "lastPaymentDate": { "type": "string", "format": "date-time" },
+        "nextDueDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["gymId", "name", "status"]
+    },
+    "Plan": {
+      "title": "Plan",
+      "description": "Subscription plan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "gymId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "duration": { "type": "string", "enum": ["monthly", "yearly", "quarterly"] },
+        "description": { "type": "string" }
+      },
+      "required": ["gymId", "name", "price", "duration"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Payment record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "gymId": { "type": "string" },
+        "memberId": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["paid", "pending", "failed"] },
+        "method": { "type": "string" }
+      },
+      "required": ["gymId", "memberId", "amount", "date", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/gyms/{gymId}": {
+      "schema": "Gym",
+      "description": "Gym details"
+    },
+    "/members/{memberId}": {
+      "schema": "Member",
+      "description": "Gym members"
+    },
+    "/plans/{planId}": {
+      "schema": "Plan",
+      "description": "Subscription plans"
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Payment records"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "GymFlow SaaS",
+  "description": "A comprehensive multi-tenant Gym Management SaaS platform for gym owners to manage members, plans, and payments.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": []
+}

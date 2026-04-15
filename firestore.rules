@@ -1,0 +1,150 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: userId (UID)
+// Fields:
+//   - uid: string (required)
+//   - email: string (required)
+//   - displayName: string (optional)
+//   - gymId: string (optional)
+//   - role: string (required, ['owner', 'admin'])
+//   - createdAt: timestamp (required)
+//
+// Collection: gyms
+// Document ID: gymId
+// Fields:
+//   - id: string (required)
+//   - name: string (required)
+//   - ownerUid: string (required)
+//   - address: string (optional)
+//   - phone: string (optional)
+//   - createdAt: timestamp (required)
+//
+// Collection: members
+// Document ID: memberId
+// Fields:
+//   - id: string (required)
+//   - gymId: string (required)
+//   - name: string (required)
+//   - email: string (optional)
+//   - phone: string (optional)
+//   - planId: string (optional)
+//   - status: string (required, ['active', 'inactive', 'expired'])
+//   - joinedAt: timestamp (required)
+//
+// Collection: plans
+// Document ID: planId
+// Fields:
+//   - id: string (required)
+//   - gymId: string (required)
+//   - name: string (required)
+//   - price: number (required)
+//   - duration: string (required, ['monthly', 'yearly', 'quarterly'])
+//
+// Collection: payments
+// Document ID: paymentId
+// Fields:
+//   - id: string (required)
+//   - gymId: string (required)
+//   - memberId: string (required)
+//   - amount: number (required)
+//   - date: timestamp (required)
+//   - status: string (required, ['paid', 'pending', 'failed'])
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         request.auth.token.email == "laptopyt0000@gmail.com");
+    }
+
+    function isApproved() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved' || isAdmin());
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isGymOwner(gymId) {
+      return isAuthenticated() && isApproved() && getUserData().gymId == gymId;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && 
+                      request.resource.data.role == 'owner' &&
+                      request.resource.data.status == 'pending' &&
+                      request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin() || (isOwner(userId) && 
+                      request.resource.data.role == resource.data.role &&
+                      request.resource.data.status == resource.data.status &&
+                      request.resource.data.uid == resource.data.uid);
+    }
+
+    // Gyms collection
+    match /gyms/{gymId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.ownerUid == request.auth.uid);
+      allow create: if isAdmin() || (isAuthenticated() && request.resource.data.ownerUid == request.auth.uid);
+      allow update: if isAdmin() || (isAuthenticated() && isApproved() && resource.data.ownerUid == request.auth.uid && 
+                      request.resource.data.ownerUid == resource.data.ownerUid);
+      allow delete: if isAdmin();
+    }
+
+    // Members collection
+    match /members/{memberId} {
+      allow read: if isAdmin() || (isAuthenticated() && isGymOwner(resource.data.gymId));
+      allow create: if isAdmin() || (isAuthenticated() && isGymOwner(request.resource.data.gymId));
+      allow update: if isAdmin() || (isAuthenticated() && isGymOwner(resource.data.gymId) && 
+                      request.resource.data.gymId == resource.data.gymId);
+      allow delete: if isAdmin() || (isAuthenticated() && isGymOwner(resource.data.gymId));
+    }
+
+    // Plans collection
+    match /plans/{planId} {
+      allow read: if isAdmin() || (isAuthenticated() && isGymOwner(resource.data.gymId));
+      allow create: if isAdmin() || (isAuthenticated() && isGymOwner(request.resource.data.gymId));
+      allow update: if isAdmin() || (isAuthenticated() && isGymOwner(resource.data.gymId) && 
+                      request.resource.data.gymId == resource.data.gymId);
+      allow delete: if isAdmin() || (isAuthenticated() && isGymOwner(resource.data.gymId));
+    }
+
+    // Payments collection
+    match /payments/{paymentId} {
+      allow read: if isAdmin() || (isAuthenticated() && isGymOwner(resource.data.gymId));
+      allow create: if isAdmin() || (isAuthenticated() && isGymOwner(request.resource.data.gymId));
+      allow update: if isAdmin() || (isAuthenticated() && isGymOwner(resource.data.gymId) && 
+                      request.resource.data.gymId == resource.data.gymId);
+      allow delete: if isAdmin() || (isAuthenticated() && isGymOwner(resource.data.gymId));
+    }
+  }
+}
